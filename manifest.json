@@ -4,7 +4,7 @@
   "manifest_version": 2,
   "name": "EOSDNS",
   "version": "0.0.2",
-  "description": "Enables the resolving of EOS domains;",
+  "description": "Enables the resolving of .eos domains.",
   "icons": {
     "16": "icon16.png",
     "32": "icon32.png",
@@ -12,7 +12,15 @@
     "128": "icon128.png"
   },
   "background": {
-    "scripts": ["eosdns.js"]
+    "scripts": [
+      "background/config.js",
+      "background/helpers.js",
+      "background/index.js"
+    ]
+  },
+  "browser_action": {
+    "default_icon":"icon32.png",
+    "default_popup":"popup/popup.html"
   },
   "omnibox": {
     "keyword": "eos"
@@ -21,8 +29,8 @@
     "webRequest",
     "webRequestBlocking",
     "proxy",
-    "*://*/*",
-    "activeTab"
+    "storage",
+    "*://*/*"
   ],
   "homepage_url": "https://eosdns.io/"
 }
