@@ -10,7 +10,6 @@ function sleep(milliseconds, host) {
 
 function searchToAccount (url, testQuery) {
   const test = url.match(testQuery);
-
   if (test && test.length) {
     let account = test[1].toLowerCase()
 
@@ -30,13 +29,31 @@ function getDnsRecords (account, host) {
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4 && xhr.status === 200) {
       const json = JSON.parse(xhr.responseText);
-      let records = json.rows && json.rows.length
-        ? json.rows.filter(record => record.type === 'A')
-        : undefined
 
-      if (records && records.length) {
-        records = records[0].value
-        sessionStorage.setItem(host, records);
+      if (json.rows && json.rows.length) {
+        console.log(json.rows)
+        // Redirect if found
+        let HTTPREDRecord = json.rows.find(
+          record => record.type.trim() === 'HTTPRED' && record.name.trim() === host + '.'
+        )
+        if (HTTPREDRecord) {
+          chrome.tabs.query({ active: true, currentWindow: true }, function(tab) {
+            chrome.tabs.update(tab[0].id, { url: HTTPREDRecord.value });
+          });
+          return
+        }
+
+        // Standard A record
+        let ARecords = json.rows.filter(
+          record => record.type.trim() === 'A' && record.name.trim() === host + '.'
+        )
+        if (ARecords.length) {
+          let ip = ARecords[0].value
+          let ttl = ARecords[0].ttl
+          sessionStorage.setItem(host, ip);
+          sessionStorage.setItem(`${host}_ttl`, (new Date().getTime() / 1000) + ttl);
+          return
+        }
       }
     }
   };
@@ -64,6 +81,10 @@ chrome.webRequest.onBeforeRequest.addListener(
     // For eos:// search
     } else if (url.indexOf('eos%3A%2F%2F') !== -1) {
       account = searchToAccount(url, "=eos%3A%2F%2F(.*?)\&")
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tab) {
+        chrome.tabs.update(tab[0].id, { url: `http://${account}.eos` });
+      });
+      return
     // For full domain
     } else if (url.indexOf('.eos') !== -1) {
       account = searchToAccount(url, "//(.*?)\.eos")
@@ -83,7 +104,10 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (tld != 'eos') return
 
     // IP to go to
-    if (!sessionStorage.getItem(domain)) {
+    let storedItem = sessionStorage.getItem(domain)
+    let storedItemTtl = sessionStorage.getItem(`${domain}_ttl`)
+    let currentTimeInSeconds = new Date().getTime() / 1000
+    if (!storedItem || !storedItemTtl || storedItemTtl < currentTimeInSeconds) {
       getDnsRecords(account, domain)
       sleep(10000, domain)
     }
