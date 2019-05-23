@@ -1,0 +1,28 @@
+{
+  "update_url": "https://clients2.google.com/service/update2/crx",
+
+  "manifest_version": 2,
+  "name": "EOSDNS",
+  "version": "0.0.2",
+  "description": "Enables the resolving of EOS domains;",
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "96": "icon96.png",
+    "128": "icon128.png"
+  },
+  "background": {
+    "scripts": ["eosdns.js"]
+  },
+  "omnibox": {
+    "keyword": "eos"
+  },
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "proxy",
+    "*://*/*",
+    "activeTab"
+  ],
+  "homepage_url": "https://eosdns.io/"
+}
