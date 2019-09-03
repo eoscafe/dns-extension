@@ -4,7 +4,7 @@ function setPac (domain, access, ip, port) {
     pacScript: { 
       data: `function FindProxyForURL(url, host) {
         if (dnsDomainIs(host, '${domain}'))
-          return '${access} ${ip}:${port}';
+          return '${access} ${ip}:${port}; DIRECT';
         
         return 'DIRECT';
       }`
@@ -14,7 +14,7 @@ function setPac (domain, access, ip, port) {
   chrome.proxy.settings.set(
     { value: pacConfig, scope: "regular" },
     function() {
-      console.log(pacConfig);
+      // console.log(pacConfig);
       // console.log("Proxy config is set.");
     }
   );
@@ -22,8 +22,9 @@ function setPac (domain, access, ip, port) {
 
 chrome.webRequest.onBeforeRequest.addListener(
   function(details) {
-    const { url } = details
-    console.log(details)
+    const { url, requestId } = details
+    // console.log(details)
+    console.log('FETCH', requestId,  url)
 
     // The eos account
     let { account, redirectUrl } = urlToAccount(url)
@@ -35,14 +36,15 @@ chrome.webRequest.onBeforeRequest.addListener(
     if (tld !== 'eos') return
 
     function dnsRecordsResultHandler (result) {
-      console.log('RESULT', result)
+      console.log('RESULT', requestId, result)
       sessionStorage.setItem(domain, JSON.stringify(result))
 
+      console.log('PAC1', requestId)
       setPac(domain, access, result.ip, port)
 
       if (result.error) {
         sessionStorage.setItem(domain, null)
-        return
+        return { cancel: true }
       } else if (result.redirectUrl) {
         return { redirectUrl: result.redirectUrl }
       }
@@ -59,8 +61,10 @@ chrome.webRequest.onBeforeRequest.addListener(
 
     const currentTimeInSeconds = new Date().getTime() / 1000
     if (!parsedRecord || !parsedRecord.ip || !parsedRecord.expiry || parsedRecord.expiry < currentTimeInSeconds) {
+      console.log('GET DNS Records', requestId)
       getDnsRecords(config.nodeUrl, config.contract, account, domain, dnsRecordsResultHandler)
     } else {
+      console.log('PAC2', requestId)
       setPac(domain, access, parsedRecord.ip, port)
     }
   },
